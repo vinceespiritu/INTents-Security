@@ -19,17 +19,24 @@
 *************************************************************/
 
 #include <avr/io.h>
+#define switch PD0
 
 int main(void)
 {
-    DDRC |= 1 << DDC0;          // Set PORTC bit 0 for output
-    PORTC |= 1 << PC1;          // Enable pull-up for switch on PORTC bit 1
+    DDRD |= 1 << DDD0;          // Set PORTD bit 0 for output
+
+    int counter = 0;
 
     while (1) {
-        if (PINC & (1 << PC1))  // Read the button
-            PORTC &= ~(1 << PC0);  // Not pressed, LED off
-        else
-            PORTC |= 1 << PC0;  // Pressed, LED on
+        
+        if (counter==10)  // Check counter
+            PORTD |= (1 << switch);  // Lights ON
+        
+        else if (counter ==20)
+            PORTC &= ~(1 << switch);  // LIGHTS OFF
+    		counter = 0;
+
+    	counter++;
     }
 
     return 0;   /* never reached */
