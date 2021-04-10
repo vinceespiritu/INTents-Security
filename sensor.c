@@ -127,7 +127,7 @@ int main(void)
 		//check if the user wants to turn off the alarm
 		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
 
         
         _delay_ms(1000);    
