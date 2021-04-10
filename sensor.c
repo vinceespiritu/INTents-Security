@@ -18,11 +18,11 @@
 RFM69 radio;
 
 #define F_CPU 16000000
-  volatile int rfm_flag = 0; //rfm_flag =1 - message sent
-  volatile int alert_flag =0; //alert_flag=1 - alert just turned on
-  volatile int pir_flag = 0;   //pir_flag=0 - no motion detected
-  volatile bool detected = 0; // flag for handling the alert and RFM notification
-  volatile string rfm_recieve; //RFM
+volatile int rfm_flag = 0; //rfm_flag =1 - message sent
+volatile int alert_flag =0; //alert_flag=1 - alert just turned on
+volatile int pir_flag = 0;   //pir_flag=0 - no motion detected
+volatile bool detected = 0; // flag for handling the alert and RFM notification
+volatile string rfm_recieve; //RFM
 
 //RFM for receiving
 void rfm_receiver(){
