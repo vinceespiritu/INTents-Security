@@ -4,6 +4,20 @@
 #include <avr/interrupt.h>
 #include "alert.h"
 
+//for RFM
+#include <RFM69.h>
+#include <SPI.h> 
+
+#define NETWORKID     0   
+#define MYNODEID      1   // Main rfm node ID
+#define TONODEID      2   // Watch rfm node ID
+#define FREQUENCY     RF69_915MHZ
+
+#define ENCRYPTKEY    "INTentsSecurity"
+#define USEACK        true // Request ACKs
+
+RFM69 radio;
+
 #define F_CPU 16000000
   volatile int rfm_flag = 0; //no message sent
   volatile int alert_flag =0; //alert 
@@ -14,6 +28,20 @@
 
 int main(void)
 {
+  // Initialize the RFM69HCW:
+  radio.initialize(FREQUENCY, MYNODEID, NETWORKID);
+  radio.setHighPower();
+  radio.encrypt(ENCRYPTKEY);
+
+  // Messages
+  char msga[5] = "alert";
+  char msgln[7] = "lighton";
+  char msglf[8] = "lightoff";
+  char msgbn[6] = "buzzon";
+  char msgbf[7] = "buzzoff";
+  char msglb[6] = "lowbat";
+  char msgs[5] = "sleep";
+
 
 //  Serial.begin(9600);
   
@@ -47,6 +75,7 @@ int main(void)
   alert_initialize();
   
   while(1){
+	  
     //servo code 
     if (pir_flag == 0){
       OCR1A=370;  //turn clockwise 325
@@ -70,7 +99,8 @@ int main(void)
         }
 		
 		if(rfm_flag = 0){
-			//send rfm message notifying user
+			//send rfm message notifying user 
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -107,6 +137,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -141,6 +172,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -175,6 +207,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -213,6 +246,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -247,6 +281,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
@@ -315,6 +350,7 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
