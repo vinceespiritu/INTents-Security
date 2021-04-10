@@ -87,7 +87,7 @@ int main(void)
   //initialize alert
   alert_initialize();
 
-  //c
+  //local counter
   int pause_count = 0; //counter for pause time
   int motor_count = 0;	// counter for rotation
   int lights_flag = 1;
@@ -150,7 +150,7 @@ int main(void)
     }
 
 
-    //handles alert and motor stopping only once after interrupt occurs
+    //handles alert and motor stopping - only once after an interrupt occurs
     if(pir_flag==1 && detected == 1){
 
     	TCCR1B&=~(1<<CS11)|(1<<CS10); //reset prescalar to 0 to stop motor
@@ -193,7 +193,7 @@ int main(void)
     	pause_count++;
     }
 
-    else if(pause_count == 40 && pir_flag == 1){
+    else if(pause_count == 40 && pir_flag == 1){ //returns to normal operation
 
     	//clear flags
     	pir_flag = 0;
@@ -211,7 +211,7 @@ int main(void)
 
     }
 
-	// only increment motor count when there's no interrupt
+	// only increment motor count under normal operation
 	if(pir_flag == 0){
 		motor_count++;
 	}
