@@ -39,8 +39,7 @@ void rfm_receiver(){
     }
 }
 
-int main(void)
-{
+int main(void) {
   // Initialize the RFM69HCW:
   radio.initialize(FREQUENCY, MYNODEID, NETWORKID);
   radio.setHighPower();
@@ -95,7 +94,7 @@ int main(void)
 
   //initialize to rotate the motor cw
   OCR1A = 370;
-  
+
   while(1){
 
    	//rotates the motor (4s/250ms=16)
@@ -188,12 +187,12 @@ int main(void)
     }
 
 
-    //leave the alert ON for 10s ( 10s/250ms = 40 )
-    if(pause_count < 40 && pir_flag == 1){
+    //leave the alert ON when human/animal is present
+    if( PIND & (1<<PD6) && pir_flag == 1){
     	pause_count++;
     }
 
-    else if(pause_count == 40 && pir_flag == 1){ //returns to normal operation
+    else if( !(PIND & (1<<PD6)) && pir_flag == 1){ //returns to normal operation
 
     	//clear flags
     	pir_flag = 0;
@@ -206,7 +205,7 @@ int main(void)
         //restart motor
         TCCR1B|=(1<<CS11)|(1<<CS10); //start motor again since pir_flag has lowered
 
-        //reset pause count time
+        //reset pause count duration
         pause_count = 0;
 
     }
@@ -217,12 +216,13 @@ int main(void)
 	}
 
 	_delay_ms(250);
-	
-  }
+
+	}
   
   return 0;
   
 }
+
 
 //Interrupt for motion detector
 ISR(PCINT2_vect){
