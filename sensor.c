@@ -4,16 +4,60 @@
 #include <avr/interrupt.h>
 #include "alert.h"
 
+//for RFM
+#include <RFM69.h>
+#include <SPI.h> 
+
+#define NETWORKID     0   
+#define MYNODEID      1   // Main rfm node ID
+#define TONODEID      2   // Watch rfm node ID
+#define FREQUENCY     RF69_915MHZ
+#define ENCRYPTKEY    "INTentsSecurity"
+#define USEACK        true // Request ACKs
+
+RFM69 radio;
+
 #define F_CPU 16000000
   volatile int rfm_flag = 0; //no message sent
   volatile int alert_flag =0; //alert 
   int lights_flag = 1;
   int buzzer_flag = 1;
   volatile int pir_flag = 0;     //no motion detected
-  volatile int motion = 0;
+  volatile int motion = 0;	
+  volatile string rfm_recieve; //RFM
+
+//RFM for receiving
+void rfm_receiver(){
+   char message[8] = "        ";
+   int x = 0;
+   for (byte i = 0; i < radio.DATALEN; i++){
+     message[x] = (char)radio.DATA[i];
+     x++;
+   }
+   
+  rfm_recieve = "";
+    for (int y = 0; y < x; y++) {
+        rfm_recieve = rfm_recieve + message[i];
+    }
+}
 
 int main(void)
 {
+  // Initialize the RFM69HCW:
+  radio.initialize(FREQUENCY, MYNODEID, NETWORKID);
+  radio.setHighPower();
+  radio.encrypt(ENCRYPTKEY);
+
+  // Messages
+  char msga[5] = "alert";
+  string false_alarm = "falsealarm";
+  string msgln = "lighton";
+  string msglf = "lightoff";
+  string msgbn = "buzzon";
+  string msgbf = "buzzoff";
+  string msglb = "lowbat";
+  string msgs = "sleep";
+
 
 //  Serial.begin(9600);
   
@@ -47,6 +91,10 @@ int main(void)
   alert_initialize();
   
   while(1){
+    //RFM Code for receiving
+    if (radio.receiveDone()){ // Got one!
+	rfm_receiver() //will update message string rfm_receieve    
+    }
     //servo code 
     if (pir_flag == 0){
       OCR1A=370;  //turn clockwise 325
@@ -70,15 +118,16 @@ int main(void)
         }
 		
 		if(rfm_flag = 0){
-			//send rfm message notifying user
+			//send rfm message notifying user 
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
 
         
         _delay_ms(1000);    
@@ -107,14 +156,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
 	  TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -141,14 +192,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
       TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -175,14 +228,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
       TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -213,14 +268,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
 	  TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -247,14 +304,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
 	  TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -281,14 +340,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
 	  TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -315,14 +376,16 @@ int main(void)
 		
 		if(rfm_flag = 0){
 			//send rfm message notifying user
+			radio.sendWithRetry(TONODEID, msga, 5);
 			//rfm_send("alert");
 			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
 		}
 		
 		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
+		if (rfm_receive == false_alarm){
 			alert_OFF();
-		}*/
+		}
+	      
         _delay_ms(1000);    
       }
 	  TCCR1B|=(1<<CS11)|(1<<CS10);
@@ -332,29 +395,34 @@ int main(void)
     }
 
 	//if rfm receives setting about only lights and no buzzer
-	/*if (rfm_receive == lights_only){
+	if (rfm_receive == msgln){
 		lights_flag = 1;
-		buzzer_flag = 0;
-	}*/
+	}
+	  
+	if (rfm_receive == msglf){
+		lights_flag = 0;
+	}
 	
 	//if rfm receives buzzer only no lights
-	/*if (rfm_receive == buzzer_only){
-		lights_flag = 0;
+	if (rfm_receive == msgbn){
 		buzzer_flag = 1;
-	}*/
+	}
+	  
+	if (rfm_receive == msgbf){
+		buzzer_flag = 0;
+	}
 	
 	
 	//low battery option for rfm?
-	/*
-	if (low_battery = true){
-		rfm_send("low");
+	if (rfm_receive = msglb){
+		//lowbat setting for RFM NOT DONE
 	}
-	*/
+	
 	
 	//turn off option?
-	/*if (rfm_receive == "sleep"){
+	if (rfm_receive == "sleep"){
 		//turn on some kind of atmeg sleep mode, will have to do more research later but I think there are options available
-	}*/
+	}
 	
 	
   }
