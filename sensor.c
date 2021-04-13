@@ -27,7 +27,7 @@ RFM69 radio;
 volatile int rfm_flag = 0; //rfm_flag =1 - message sent
 volatile int alert_flag =0; //alert_flag=1 - alert just turned on
 volatile int pir_flag = 0;   //pir_flag=0 - no motion detected
-volatile bool detected = 0; // flag for handling the alert and RFM notification
+volatile int detected = 0; // flag for handling the alert and RFM notification
 String rfm_receive; //RFM
 
 //RFM for receiving
