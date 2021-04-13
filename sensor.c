@@ -1,397 +1,146 @@
+
+#include "alert.h"
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
 #include <avr/interrupt.h>
-#include "alert.h"
 
 #define F_CPU 16000000
-  volatile int rfm_flag = 0; //no message sent
-  volatile int alert_flag =0; //alert 
-  int lights_flag = 1;
-  int buzzer_flag = 1;
-  volatile int pir_flag = 0;     //no motion detected
-  volatile int motion = 0;
+volatile int rfm_flag = 0; //rfm_flag =1 - message sent
+volatile int alert_flag =0; //alert_flag=1 - alert just turned on
+volatile int pir_flag = 0;   //pir_flag=0 - no motion detected
+volatile int detected = 0; // flag for handling the alert and RFM notification
 
-int main(void)
-{
+
+int main(void) {
 
 //  Serial.begin(9600);
   
-  DDRD|=(1<<PD2); //motion led
-  PORTD&=~(1<<PD2);
-  //DDRB|=(1<<PD2); //alert led
-  //PORTB&=~(1<<PD2);
-  //DDRD|=(1<<PD3); //rfm led
-  //PORTD&=~(1<<PD3); 
+  //low battery detector
+  DDRD|=(1<<PD2);
+
+  //PIR input signal
+  DDRD&=~(1<<PD6);       
   
-  DDRD&=~(1<<PD6);        //PIR input signal
-  //PORTD|=(1<<PD6);    //enable pullup resistors
-  
+  //Servo motor pwm signal
   DDRB|=(1<<PB1);       //servo output pwm
-  PORTB&=~(1<<PB1); //initialize to zero
+  PORTB&=~(1<<PB1);   //initialize to zero
   
+  //Initializes interrupt
   PCICR|=(1<<PCIE2); //pin change interrupt for port D
   PCMSK2|=(1<<PCINT22); //D6 i/o line interrupt enabled
   sei();  //global interrupt enabled
   
-  //pwm timer
+  //Initializes pwm timer
   //https://embedds.com/controlling-servo-motor-with-avr/
-  TCCR1A|=(1<<COM1A1)|(1<<WGM11);        //NON Inverted PWM
-    TCCR1B|=(1<<WGM13)|(1<<WGM12)|(1<<CS11)|(1<<CS10); //PRESCALER=64 MODE 14(FAST PWM)
-    ICR1=4999;  //fPWM=50Hz 
+
+  TCCR1A|=(1<<COM1A1)|(1<<WGM11);              //NON Inverted PWM
+  TCCR1B|=(1<<WGM13)|(1<<WGM12)|(1<<CS11)|(1<<CS10); //PRESCALER=64 MODE 14(FAST PWM)
+  ICR1=4999;  //fPWM=50Hz 
 
   // Initialize the LCD
   //  lcd_init();
   
   //initialize alert
   alert_initialize();
-  
+
+  //local counter
+  int pause_count = 0; //counter for pause time
+  int motor_count = 0;  // counter for rotation
+  int lights_flag = 1;
+  int buzzer_flag = 1;
+
+  //initialize to rotate the motor cw
+  OCR1A = 370;
+
   while(1){
-    //servo code 
-    if (pir_flag == 0){
-      OCR1A=370;  //turn clockwise 325
-      while (pir_flag==1){  //all these if statements are so it doesn't have to finish the entire clockwise/counterclockwise sequence (which takes 8 seconds if the interrupt occurs at the very beginning) before checking the flags; instead checks for pir_flag every 1 second
-        TCCR1B&=~(1<<CS11)|(1<<CS10); //reset prescalar to 0 to stop motor
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
 
-        
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10); //start motor again since pir_flag has lowered
-      _delay_ms(1000);
-      
-      while (pir_flag==1){         
-        TCCR1B&=~(1<<CS11)|(1<<CS10); 
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-      
-      while (pir_flag==1){     
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-      TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-
-      while (pir_flag==1){     
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-      TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-      
-      
-    //  OCR1A=376; //stop 
-    //  _delay_ms(5000);
-      OCR1A=384; //turn counter clockwise 425
-      while (pir_flag==1){      
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-      
-      while (pir_flag==1){         
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-      
-      while (pir_flag==1){     
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-
-      while (pir_flag==1){     
-        TCCR1B&=~(1<<CS11)|(1<<CS10);
-        if (alert_flag == 0){
-            alert_flag = 1;
-			if (lights_flag == 1 && buzzer_flag == 0){
-				Lights_ON();
-			}
-			else if (lights_flag == 0 && buzzer_flag == 1){
-				Buzzer_ON();
-			}
-			else if (lights_flag = 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
-				Alert_OFF();
-			}
-			else{
-				Alert_ON(); //default lights and buzzer = 1
-			}
-			alert_flag = 1;
-        }
-		
-		if(rfm_flag = 0){
-			//send rfm message notifying user
-			//rfm_send("alert");
-			rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
-		}
-		
-		//check if the user wants to turn off the alarm
-		/*if (rfm_receive == false_alarm){
-			alert_OFF();
-		}*/
-        _delay_ms(1000);    
-      }
-	  TCCR1B|=(1<<CS11)|(1<<CS10);
-      _delay_ms(1000);
-    //  OCR1A=375; //stop 
-    //  _delay_ms(5000);
+    //rotates the motor (4s/250ms=16)
+    if(motor_count == 16 && OCR1A == 370 ){ //after 4s rotate ccw
+      OCR1A = 384;
+      motor_count = 0;
+    }
+    else if(motor_count == 16 && OCR1A ==384){ //after 4s rotate cw
+      OCR1A = 370;
+      motor_count = 0;
     }
 
-	//if rfm receives setting about only lights and no buzzer
-	/*if (rfm_receive == lights_only){
-		lights_flag = 1;
-		buzzer_flag = 0;
-	}*/
-	
-	//if rfm receives buzzer only no lights
-	/*if (rfm_receive == buzzer_only){
-		lights_flag = 0;
-		buzzer_flag = 1;
-	}*/
-	
-	
-	//low battery option for rfm?
-	/*
-	if (low_battery = true){
-		rfm_send("low");
-	}
-	*/
-	
-	//turn off option?
-	/*if (rfm_receive == "sleep"){
-		//turn on some kind of atmeg sleep mode, will have to do more research later but I think there are options available
-	}*/
-	
-	
+    //handles alert and motor stopping - only once after an interrupt occurs
+    if(pir_flag==1 && detected == 1){
+
+      TCCR1B&=~(1<<CS11)|(1<<CS10); //reset prescalar to 0 to stop motor
+
+      pause_count = 0;  //makes sure start counting from 0
+
+        //turn on alert
+        if (alert_flag == 0){
+
+      if (lights_flag == 1 && buzzer_flag == 0){
+        Lights_ON();
+      }
+      else if (lights_flag == 0 && buzzer_flag == 1){
+        Buzz_ON();
+      }
+      else if (lights_flag == 0 && buzzer_flag == 0){ //scenario in which user only wants to be notified but no alarm 
+        Alert_OFF();
+      }
+      else{
+        Alert_ON(); //default lights and buzzer = 1
+      }
+      alert_flag = 1;
+        }
+
+
+    detected = 0;
+
+    }
+
+
+    //leave the alert ON when human/animal is present
+    if( PIND & (1<<PD6) && pir_flag == 1){
+      pause_count++;
+    }
+
+    else if( !(PIND & (1<<PD6)) && pir_flag == 1){ //returns to normal operation
+
+      //clear flags
+      pir_flag = 0;
+        alert_flag = 0;
+        rfm_flag = 0;
+
+        //turns off alert
+        Alert_OFF();
+
+        //restart motor
+        TCCR1B|=(1<<CS11)|(1<<CS10); //start motor again since pir_flag has lowered
+
+        //reset pause count duration
+        pause_count = 0;
+
+    }
+
+  // only increment motor count under normal operation
+  if(pir_flag == 0){
+    motor_count++;
+  }
+
+  _delay_ms(250);
+
   }
   
   return 0;
   
 }
 
+
+//Interrupt for motion detector
 ISR(PCINT2_vect){
-  //PORTD|=(1<<PD2);
-  //Serial.println("INTERRUPT");
-  //Serial.println(PIND & (1<<PD6));
-  //motion = (PIND & (1<<PD6)) ;  // read input value
-    if((PIND & (1<<PD6))) {            // check if the input is HIGH
-      PORTD|=(1<<PD2);  // turn LED ON
-      if (pir_flag == 0) {
-        // we have just turned on
-       // Serial.println("Motion detected!");
-        // We only want to print on the output change, not state
-        pir_flag= 1;
-      }
-      } 
-    else {
-   //   Serial.println("INTERRUPT2");
-      _delay_ms(500);
-      PORTD&=~(1<<PD2); // turn LED OFF
-      if (pir_flag == 1){
-        // we have just turned of
-        //Serial.println("Motion ended!");
-        // We only want to print on the output change, not state
-        pir_flag = 0;
-        
-        alert_flag = 0;
-        Alert_OFF();
-        
-        rfm_flag = 0;
-      }
+
+    if((PIND & (1<<PD6))) {  // check if the input is HIGH
+     // PORTD|=(1<<PD2);  // turn LED ON for debugging
+        pir_flag = 1;
+        detected = 1;
     }
 
 }
