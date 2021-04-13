@@ -1,3 +1,9 @@
+#include <SPI.h>
+
+#include <SPIFlash.h>
+
+#include <RFM69.h>
+#include <RFM69registers.h>
 
 #include "alert.h"
 
@@ -6,14 +12,55 @@
 #include <stdio.h>
 #include <avr/interrupt.h>
 
+//for RFM
+
+#define NETWORKID     0   
+#define MYNODEID      1   // Main rfm node ID
+#define TONODEID      2   // Watch rfm node ID
+#define FREQUENCY     RF69_915MHZ
+#define ENCRYPTKEY    "INTentsSecurity"
+#define USEACK        true // Request ACKs
+
+RFM69 radio;
+
 #define F_CPU 16000000
 volatile int rfm_flag = 0; //rfm_flag =1 - message sent
 volatile int alert_flag =0; //alert_flag=1 - alert just turned on
 volatile int pir_flag = 0;   //pir_flag=0 - no motion detected
-volatile int detected = 0; // flag for handling the alert and RFM notification
+volatile bool detected = 0; // flag for handling the alert and RFM notification
+String rfm_receive; //RFM
 
+//RFM for receiving
+void rfm_receiver(){
+   char message[8] = "        ";
+   int x = 0;
+   for (byte i = 0; i < radio.DATALEN; i++){
+     message[x] = (char)radio.DATA[i];
+     x++;
+   }
+   
+  rfm_receive = "";
+    for (int y = 0; y < x; y++) {
+        rfm_receive = rfm_receive + message[y];
+    }
+}
 
 int main(void) {
+  // Initialize the RFM69HCW:
+  radio.initialize(FREQUENCY, MYNODEID, NETWORKID);
+  radio.setHighPower();
+  radio.encrypt(ENCRYPTKEY);
+
+  // Messages
+  char msga[5] = "alert";
+  String false_alarm = "falsealarm";
+  String msgln = "lighton";
+  String msglf = "lightoff";
+  String msgbn = "buzzon";
+  String msgbf = "buzzoff";
+  String msglb = "lowbat";
+  String msgs = "sleep";
+
 
 //  Serial.begin(9600);
   
@@ -66,6 +113,48 @@ int main(void) {
       motor_count = 0;
     }
 
+     //RFM Code for receiving
+    if ( radio.receiveDone() ){ // Got one!
+
+  rfm_receiver(); //will update message string rfm_receieve
+
+    //check if the user wants to turn off the alarm
+    if (rfm_receive == false_alarm){
+        Alert_OFF();
+    }
+
+    //if rfm receives setting about only lights and no buzzer
+    else if (rfm_receive == msgln){
+      lights_flag = 1;
+    }
+      
+    else if (rfm_receive == msglf){
+      lights_flag = 0;
+    }
+    
+    //if rfm receives buzzer only no lights
+    else if (rfm_receive == msgbn){
+      buzzer_flag = 1;
+    }
+      
+    else if (rfm_receive == msgbf){
+      buzzer_flag = 0;
+    }
+    
+    //low battery option for rfm?
+    else if (rfm_receive = msglb){
+      //lowbat setting for RFM NOT DONE
+    }
+    
+    //turn off option?
+    else if (rfm_receive == "sleep"){
+      //turn on some kind of atmeg sleep mode, will have to do more research later but I think there are options available
+    }
+
+
+    }
+
+
     //handles alert and motor stopping - only once after an interrupt occurs
     if(pir_flag==1 && detected == 1){
 
@@ -90,7 +179,14 @@ int main(void) {
       }
       alert_flag = 1;
         }
-
+    
+    //sends a message to watch
+    if(rfm_flag = 0){
+      //send rfm message notifying user 
+      radio.sendWithRetry(TONODEID, msga, 5);
+      //rfm_send("alert");
+      rfm_flag = 1; //or rfm_flag = rfm_confirm but we want to make sure not to spam the user with messages if they don't respond
+    }
 
     detected = 0;
 
