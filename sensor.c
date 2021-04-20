@@ -141,11 +141,6 @@ int main(void) {
       buzzer_flag = 0;
     }
     
-    //low battery option for rfm?
-    else if (rfm_receive = msglb){
-      //lowbat setting for RFM NOT DONE
-    }
-    
     //turn off option?
     else if (rfm_receive == "sleep"){
       //turn on some kind of atmeg sleep mode, will have to do more research later but I think there are options available
@@ -193,7 +188,7 @@ int main(void) {
     }
     
     //sends a lowbat alert to watch
-    if( !(PIND & (1<<PD2))){
+    if( !(PIND & (1<<PD2))) {
        radio.sendWithRetry(TONODEID, msglb, 6);
        //add sleep mode here for RFM, Buzzer
     }
