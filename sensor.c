@@ -58,7 +58,7 @@ int main(void) {
   String msglf = "lightoff";
   String msgbn = "buzzon";
   String msgbf = "buzzoff";
-  String msglb = "lowbat";
+  char msglb[6] = "lowbat";
   String msgs = "sleep";
 
 
@@ -190,6 +190,12 @@ int main(void) {
 
     detected = 0;
 
+    }
+    
+    //sends a lowbat alert to watch
+    if( !(PIND & (1<<PD2))){
+       radio.sendWithRetry(TONODEID, msglb, 6);
+       //add sleep mode here for RFM, Buzzer
     }
 
 
