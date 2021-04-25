@@ -142,11 +142,15 @@ int main(void) {
     }
     
     //turn off option?
-    else if (rfm_receive == "sleep"){
-      //turn on some kind of atmeg sleep mode, will have to do more research later but I think there are options available
+    else if (rfm_receive == "sleepon"){
+      //turn on some kind of rfm sleep mode, will have to do more research later but I think there are options available
+      radio.sleep();
     }
-
-
+       
+    else if (rfm_receive == "sleepoff"){
+      //turn off some kind of rfm sleep mode, will have to do more research later but I think there are options available
+      radio.receiveDone();
+    }
     }
 
 
