@@ -59,7 +59,7 @@ int main(void) {
 
   
   //low battery detector
-  DDRD|=(1<<PD2);
+  DDRD|=(1<<PD0);
 
   //PIR input signal
   DDRD&=~(1<<PD6);       
